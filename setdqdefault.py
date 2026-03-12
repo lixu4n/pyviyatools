@@ -20,9 +20,13 @@ Behavior:
 - Optional --replace to overwrite existing values
 
 TEST : Celeste Duguay (Jan 12 2026)
+TEST2 
 """
 
-# Import Python modules
+# ==============================
+# Standard Library Imports
+# ==============================
+
 import argparse
 import json
 import re
@@ -31,13 +35,25 @@ import sys
 from typing import Any, Dict, Tuple
 
 
+# =====================================================
+# Configuration Retrieval
+# =====================================================
+
 def run_get_config(configuration_def: str) -> Dict[str, Any]:
-    """Runs getconfigurationproperties.py and return parsed JSON.
-    
-    -- Check if the script failed --> if yes, raise error
-    -- Try to parse the script's output as JSON --> if valid, return as a python dict
-    -- If jJSON invalid --> Raise error parsing
-    
+    """
+    Execute getconfigurationproperties.py to retrieve
+    configuration as JSON.
+
+    Parameters:
+        configuration_def (str): Config definition name
+            e.g. 'sas.compute.server'
+
+    Returns:
+        Dict[str, Any]: Parsed JSON configuration
+
+    Raises:
+        RuntimeError: If script execution fails
+        RuntimeError: If JSON parsing fails
     """
 
     cmd = ["python3", "getconfigurationproperties.py", "-c", configuration_def, "-o", "json"]
@@ -48,7 +64,10 @@ def run_get_config(configuration_def: str) -> Dict[str, Any]:
         return json.loads(p.stdout)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse JSON from getconfigurationproperties.py: {e}")
-
+    
+# =====================================================
+# Item Selection Utilities
+# =====================================================
 
 def find_item_by_name(data: Dict[str, Any], item_name: str) -> Dict[str, Any]:
     """Find exactly one item in data['items'] with .name == item_name."""
@@ -72,6 +91,10 @@ def find_item_by_id(data: Dict[str, Any], item_id: str) -> Dict[str, Any]:
         raise KeyError(f"Item id '{item_id}' not found. Available ids: {ids}")
     return matches[0]
 
+
+# =====================================================
+# Content Modification Logic
+# =====================================================
 
 def append_if_missing(contents: str, key: str, value: str) -> Tuple[str, bool]:
     """
@@ -99,6 +122,9 @@ def replace_or_append(contents: str, key: str, value: str) -> Tuple[str, bool]:
     else:
         return append_if_missing(contents, key, value)
 
+# =====================================================
+# Business Logic (user)
+# =====================================================
 
 def update_dq_defaults(
     data: Dict[str, Any],
@@ -109,7 +135,14 @@ def update_dq_defaults(
     dqlocale: str,
     replace: bool,
 ) -> Tuple[Dict[str, Any], bool]:
-    """Update the target item contents. Returns (updated_data, changed)."""
+    """
+    Update DQ default settings in the selected configuration item.
+
+    Exactly one of item_name or item_id must be provided.
+
+    Returns:
+        (updated_data, changed_flag)
+    """
     if (item_name is None) == (item_id is None):
         raise ValueError("Provide exactly one of --item-name or --item-id.")
 
@@ -129,6 +162,11 @@ def update_dq_defaults(
 
     item["contents"] = contents
     return data, changed
+
+
+# =====================================================
+# CLI Interface
+# =====================================================
 
 
 def main():
@@ -162,6 +200,10 @@ def main():
         print(f"No changes needed (keys already present). File still written: {args.out}")
 
 
+# =====================================================
+# Entry Point
+# =====================================================
+
 if __name__ == "__main__":
     try:
         main()
@@ -170,17 +212,20 @@ if __name__ == "__main__":
         sys.exit(1)
 
 
-"""
-python3 setdqdefaults.py \
-  --config-def sas.compute.server \
-  --item-name configuration_options \
-  --dqsetuploc "QKB CI 33" \
-  --dqlocale "ENUSA" \
-  --out /tmp/configs/compute_config_updated.json
-
-  python3 setconfigurationproperties.py \
-  --file /tmp/configs/compute_config_updated.json
+# =====================================================
+# EXAMPLE
 
 
+# python3 setdqdefault.py \
+#   --config-def sas.compute.server \
+#   --item-name configuration_options \
+#   --dqsetuploc "QKB CI 33" \
+#   --dqlocale "ENUSA" \
+#   --out /tmp/configs/compute_config_updated.json
 
-"""
+
+# sas-viya configuration configurations update \
+#   --file /tmp/compute_config_test.json
+
+
+# =====================================================
