@@ -189,23 +189,15 @@ def write_payload(payload, filepath):
 # Step 8: Apply Config
 # ---------------------------
 def apply_config(filepath):
-    import os
-
-    # Copy current environment
-    env = os.environ.copy()
-
-    # Override CLI path
-    env["SAS_CLI_HOME"] = "/usr/local/bin"
-    env["PATH"] = "/usr/local/bin:" + env["PATH"]
-
     cmd = [
-        "python3",
-        "setconfigurationproperties.py",
+        "sas-viya",
+        "configuration",
+        "update",
         "--file",
         filepath
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    result = subprocess.run(cmd, capture_output=True, text=True)
 
     print(result.stdout)
     if result.stderr:
