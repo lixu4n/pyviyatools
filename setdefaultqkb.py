@@ -10,7 +10,9 @@
 #
 # march2026 Initial version
 
-# imports
+
+#import
+
 from __future__ import print_function
 import argparse
 import json
@@ -72,13 +74,13 @@ def get_engine_config(engine):
     config_data = getconfigurationproperty(config_def)
 
     if not config_data or "items" not in config_data:
-        raise RuntimeError("No config found")
+        raise RuntimeError(f"No config found for {engine}")
 
     for item in config_data["items"]:
         if item.get("name") == item_name:
             return item, item.get("contents", "")
 
-    raise RuntimeError("Could not find correct config item")
+    raise RuntimeError(f"Could not find correct config item for {engine}")
 
 
 # ---------------------------
@@ -92,26 +94,16 @@ def parse_qkb(contents):
         line = line.strip()
 
         if "DQLOCALE" in line:
-            first = line.find('"')
-            last = line.rfind('"')
-            if first != -1 and last != -1:
-                locale = line[first + 1:last]
-            else:
-                first = line.find("(")
-                last = line.rfind(")")
-                if first != -1 and last != -1:
-                    locale = line[first + 1:last]
+            if '"' in line:
+                locale = line.split('"')[1]
+            elif "(" in line:
+                locale = line.split("(")[1].split(")")[0]
 
         if "DQSETUPLOC" in line:
-            first = line.find('"')
-            last = line.rfind('"')
-            if first != -1 and last != -1:
-                qkb = line[first + 1:last]
-            else:
-                first = line.find("'")
-                last = line.rfind("'")
-                if first != -1 and last != -1:
-                    qkb = line[first + 1:last]
+            if '"' in line:
+                qkb = line.split('"')[1]
+            elif "'" in line:
+                qkb = line.split("'")[1]
 
     return {"locale": locale, "qkb": qkb}
 
@@ -127,9 +119,9 @@ def needs_update(current, target_locale, target_qkb):
 
 
 # ---------------------------
-# Step 5: Update Contents
+# Step 5: Update Contents (UPDATED LOGIC)
 # ---------------------------
-def update_contents(contents, new_locale, new_qkb):
+def update_contents(contents, new_locale, new_qkb, engine):
     updated_lines = []
     found_locale = False
     found_qkb = False
@@ -137,27 +129,40 @@ def update_contents(contents, new_locale, new_qkb):
     for line in contents.splitlines():
         stripped = line.strip()
 
-        if "DQLOCALE" in stripped:
-            if stripped.startswith("cas."):
-                line = f'cas.DQLOCALE="{new_locale}"'
-            else:
-                line = f'-DQLOCALE ({new_locale})'
-            found_locale = True
+        # ---- FORCE COMPUTE FORMAT ----
+        if engine == "compute":
+            if "DQLOCALE" in stripped:
+                line = f"-DQLOCALE ({new_locale})"
+                found_locale = True
 
-        elif "DQSETUPLOC" in stripped:
-            if stripped.startswith("cas."):
-                line = f'cas.DQSETUPLOC="{new_qkb}"'
-            else:
+            elif "DQSETUPLOC" in stripped:
                 line = f"-DQSETUPLOC '{new_qkb}'"
-            found_qkb = True
+                found_qkb = True
+
+        # ---- CAS FORMAT ----
+        elif engine == "cas":
+            if "DQLOCALE" in stripped:
+                line = f'cas.DQLOCALE="{new_locale}"'
+                found_locale = True
+
+            elif "DQSETUPLOC" in stripped:
+                line = f'cas.DQSETUPLOC="{new_qkb}"'
+                found_qkb = True
 
         updated_lines.append(line)
 
+    # Add if missing
     if not found_locale:
-        updated_lines.append(f'cas.DQLOCALE="{new_locale}"')
+        if engine == "compute":
+            updated_lines.append(f"-DQLOCALE ({new_locale})")
+        else:
+            updated_lines.append(f'cas.DQLOCALE="{new_locale}"')
 
     if not found_qkb:
-        updated_lines.append(f'cas.DQSETUPLOC="{new_qkb}"')
+        if engine == "compute":
+            updated_lines.append(f"-DQSETUPLOC '{new_qkb}'")
+        else:
+            updated_lines.append(f'cas.DQSETUPLOC="{new_qkb}"')
 
     return "\n".join(updated_lines)
 
@@ -216,7 +221,7 @@ def process_engine(engine, locale, qkb, output_file):
         print("No changes needed ✅")
         return
 
-    updated_contents = update_contents(contents, locale, qkb)
+    updated_contents = update_contents(contents, locale, qkb, engine)
 
     print("\n--- Updated Preview ---")
     print(updated_contents)
@@ -226,8 +231,8 @@ def process_engine(engine, locale, qkb, output_file):
 
     print(f"\nPayload written to {output_file}")
 
-    # 🔴 Uncomment when ready
-    # apply_config(output_file)
+    # COMMENT THIS FIRST FOR TESTING
+    apply_config(output_file)
 
 
 # ---------------------------
@@ -242,7 +247,12 @@ def main():
         if len(args.engine) > 1:
             output_file = f"/tmp/qkb_update_{engine}.json"
 
-        process_engine(engine, args.locale, args.qkb, output_file)
+        process_engine(
+            engine=engine,
+            locale=args.locale,
+            qkb=args.qkb,
+            output_file=output_file
+        )
 
 
 if __name__ == "__main__":
