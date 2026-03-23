@@ -9,6 +9,8 @@
 #
 # Change History
 #
+
+# Run :  python3 getdefaultqkb.py --engine cas compute or --engione cas for testing
 # 02FEB2026 Initial version
 
 # Import Python modules
