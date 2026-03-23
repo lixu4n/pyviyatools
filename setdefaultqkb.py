@@ -190,9 +190,8 @@ def write_payload(payload, filepath):
 # ---------------------------
 def apply_config(filepath):
     cmd = [
-        "sas-viya",
-        "configuration",
-        "update",
+        "python3",
+        "setconfigurationproperties.py",
         "--file",
         filepath
     ]
