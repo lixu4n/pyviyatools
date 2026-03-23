@@ -189,6 +189,15 @@ def write_payload(payload, filepath):
 # Step 8: Apply Config
 # ---------------------------
 def apply_config(filepath):
+    import os
+
+    # Copy current environment
+    env = os.environ.copy()
+
+    # Override CLI path
+    env["SAS_CLI_HOME"] = "/usr/local/bin"
+    env["PATH"] = "/usr/local/bin:" + env["PATH"]
+
     cmd = [
         "python3",
         "setconfigurationproperties.py",
@@ -196,7 +205,7 @@ def apply_config(filepath):
         filepath
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
     print(result.stdout)
     if result.stderr:
@@ -204,7 +213,6 @@ def apply_config(filepath):
 
     if result.returncode != 0:
         raise RuntimeError("Failed to apply configuration")
-
 
 # ---------------------------
 # Step 9: Full Engine Flow
