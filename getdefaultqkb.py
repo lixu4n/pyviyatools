@@ -140,7 +140,7 @@ def main():
         "--engine",
         nargs="*",
         choices=["cas", "compute"],
-        required='True',
+        required=True,
         help=(
             "Engine(s) to query: cas, compute. "
             "If omitted, both are returned."
