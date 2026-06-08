@@ -33,8 +33,8 @@ import argparse
 import json
 import subprocess
 
-from sharedfunctions import getconfigurationproperty
-
+# AFTER
+from sharedfunctions import getconfigurationproperty, updateconfigurationproperty, getclicommand
 
 # call getdefaultqkb.py as a subprocess and return current locale and qkb for the given engine
 def get_current_qkb_from_script(engine):
@@ -189,21 +189,11 @@ def write_payload(payload, filepath):
         json.dump(payload, f, indent=4)
 
 
-# call setconfigurationproperties.py to apply the JSON payload to Viya
+# AFTER
 def apply_config(filepath):
-
-    cmd = ["python3", "setconfigurationproperties.py", "--file", filepath]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    print(result.stdout)
-
-    if result.stderr:
-        print(result.stderr)
-
-    if result.returncode != 0:
-        raise RuntimeError("Failed to apply configuration.")
-
+    clicommand = getclicommand()
+    command = clicommand + " configuration configurations update --file " + filepath
+    updateconfigurationproperty(command)
 
 # orchestrate the full read-compare-update-validate flow for a single engine
 def process_engine(engine, locale, qkb, output_file):
